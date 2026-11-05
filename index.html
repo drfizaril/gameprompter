@@ -1,0 +1,676 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Penjana Prompt Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Unbounded:wght@600;700&display=swap">
+<style>
+/* Layout: borang pilihan di kiri, "skrin" prompt amber yang melekat di kanan (desktop); bertindan di telefon dengan bar salin di bawah. */
+:root{
+  --bg:#E7EDEA; --surface:#F6F9F7; --ink:#12221E; --muted:#51655F; --line:#C3D0CB;
+  --accent:#FFB000; --on-accent:#1A1200; --key:#8A5F00; --focus:#0B6B5C;
+  --screen:#16120B; --screen-ink:#F1E5C6; --screen-dim:#A39375; --screen-hi:#FFB000; --screen-line:#3B3223;
+  --display:"Unbounded","Trebuchet MS",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1614; --surface:#16211E; --ink:#E4EFEB; --muted:#93A8A1; --line:#2A3B36;
+    --focus:#5FD0BC; --screen:#0A0906; --screen-line:#2E2619; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1614; --surface:#16211E; --ink:#E4EFEB; --muted:#93A8A1; --line:#2A3B36;
+  --focus:#5FD0BC; --screen:#0A0906; --screen-line:#2E2619; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--ink);
+  font:15px/1.55 var(--body);
+  padding-block:28px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:1180px;margin:0 auto}
+button{font:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Pengepala */
+.kicker{margin:0 0 10px;font:500 .74rem var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font:700 clamp(1.7rem,5vw,2.7rem)/1.1 var(--display);letter-spacing:-.015em;text-wrap:balance}
+.lede{margin:14px 0 0;max-width:62ch;color:var(--muted);font-size:1.02rem}
+
+/* Susun atur utama */
+.app{display:grid;gap:36px;margin-top:30px}
+.form{display:flex;flex-direction:column;gap:26px;min-width:0}
+.out{min-width:0}
+@media (min-width:960px){
+  .app{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start;gap:48px}
+  .out{position:sticky;top:16px}
+  .dock{display:none}
+}
+@media (max-width:959px){ body{padding-bottom:104px} }
+
+/* Bahagian borang */
+.sec{border-top:1px solid var(--line);padding-top:18px;min-width:0}
+.sec:first-child{border-top:0;padding-top:0}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.sec-h h2{margin:0;font:600 .8rem var(--body);letter-spacing:.1em;text-transform:uppercase}
+.hint{font:400 .72rem var(--mono);color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+.chip{
+  min-height:40px;padding:.5rem .8rem;text-align:left;cursor:pointer;
+  background:transparent;color:var(--ink);border:1.5px solid var(--line);border-radius:4px;font-size:.9rem;
+  display:flex;flex-direction:column;justify-content:center;gap:1px;
+}
+.chip:hover{border-color:var(--ink)}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip .s{font:400 .7rem var(--mono);opacity:.7}
+.fields{display:grid;gap:20px}
+.fl{display:block;margin-bottom:8px;font-weight:500;font-size:.88rem}
+.fl small{font-weight:400;color:var(--muted)}
+.inp{
+  width:100%;padding:.6rem .75rem;background:var(--surface);color:var(--ink);
+  border:1.5px solid var(--line);border-radius:4px;font:inherit;
+}
+.inp::placeholder{color:var(--muted);opacity:.85}
+textarea.inp{min-height:78px;resize:vertical}
+.inputs{display:grid;gap:16px}
+
+/* Panel output */
+.out-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
+.out-head h2{margin:0;font:600 1rem var(--display);letter-spacing:-.005em}
+.ctl{display:flex;flex-wrap:wrap;gap:8px}
+.seg{display:inline-flex;gap:2px;padding:2px;border:1.5px solid var(--line);border-radius:4px}
+.sb{padding:.35rem .7rem;border:0;border-radius:2px;background:transparent;color:var(--ink);cursor:pointer;font-size:.84rem;font-weight:500}
+.sb:hover{background:var(--line)}
+.sb.on{background:var(--ink);color:var(--bg)}
+.note{margin:0 0 12px;color:var(--muted);font-size:.8rem}
+
+.screen{background:var(--screen);color:var(--screen-ink);border:1px solid var(--screen-line);border-radius:8px;overflow:hidden}
+.sbar{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:9px 14px;border-bottom:1px solid var(--screen-line);
+  font:500 .72rem var(--mono);letter-spacing:.04em;color:var(--screen-dim);
+}
+.sbar .name{display:flex;align-items:center;gap:10px}
+.dots{display:flex;gap:4px}
+.dots i{display:block;width:8px;height:8px;background:var(--screen-line)}
+.dots i:first-child{background:var(--screen-hi)}
+.sbody{
+  padding:16px 18px;min-height:300px;max-height:calc(100vh - 270px);overflow:auto;
+  font:400 .82rem/1.65 var(--mono);outline-offset:-3px;
+}
+@media (max-width:959px){ .sbody{max-height:60vh} }
+.sbody div{white-space:pre-wrap;overflow-wrap:anywhere}
+.sbody .h{margin-top:.9em;color:var(--screen-hi);font-weight:500;letter-spacing:.03em}
+.sbody .h:first-child{margin-top:0}
+.sbody .li{padding-left:1.4em;text-indent:-1.4em}
+.sbody .gap{height:.45em}
+.cur{display:inline-block;width:.55em;height:1.05em;margin-left:3px;vertical-align:text-bottom;background:var(--screen-hi);animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){ .cur{animation:none} }
+
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.btn{
+  padding:.7rem 1.1rem;background:transparent;color:var(--ink);cursor:pointer;
+  border:1.5px solid var(--ink);border-radius:4px;font-weight:600;font-size:.92rem;
+}
+.btn:hover{background:var(--line)}
+.btn.primary{background:var(--accent);color:var(--on-accent);border-color:var(--key);box-shadow:0 3px 0 var(--key)}
+.btn.primary:hover{background:var(--accent);filter:brightness(1.05)}
+.btn.primary:active{transform:translateY(2px);box-shadow:0 1px 0 var(--key)}
+.how{margin:16px 0 0;color:var(--muted);font-size:.84rem;max-width:56ch}
+
+/* Bar salin untuk telefon */
+.dock{
+  position:fixed;left:0;right:0;bottom:0;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:var(--surface);border-top:1px solid var(--line);
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+}
+.dock-stats{font:400 .74rem var(--mono);color:var(--muted);min-width:0}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="kicker">Alat prompt untuk game HTML5</p>
+    <h1>Penjana Prompt Game</h1>
+    <p class="lede">Pilih jenis game dan beberapa perkara lain. Anda akan mendapat satu prompt yang boleh ditampal ke mana-mana AI untuk menghasilkan game pelayar dengan HTML5, JavaScript dan CSS.</p>
+  </header>
+
+  <main class="app">
+    <div class="form">
+      <section class="sec" aria-labelledby="h-genre">
+        <div class="sec-h"><h2 id="h-genre">Jenis game</h2><span class="hint">pilih satu</span></div>
+        <div class="chips grid" id="c-genre"></div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-theme">
+        <div class="sec-h"><h2 id="h-theme">Gaya visual</h2><span class="hint">pilih satu</span></div>
+        <div class="chips" id="c-theme"></div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-controls">
+        <div class="sec-h"><h2 id="h-controls">Kawalan</h2><span class="hint">boleh pilih banyak</span></div>
+        <div class="chips" id="c-controls"></div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-features">
+        <div class="sec-h"><h2 id="h-features">Ciri-ciri tambahan</h2><span class="hint">boleh pilih banyak</span></div>
+        <div class="chips" id="c-features"></div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-set">
+        <div class="sec-h"><h2 id="h-set">Tetapan game</h2><span class="hint">pilih satu setiap kumpulan</span></div>
+        <div class="fields">
+          <div><span class="fl">Kesukaran</span><div class="chips" id="c-difficulty"></div></div>
+          <div><span class="fl">Pemain sasaran</span><div class="chips" id="c-audience"></div></div>
+          <div><span class="fl">Platform</span><div class="chips" id="c-platform"></div></div>
+          <div><span class="fl">Teknologi</span><div class="chips" id="c-tech"></div></div>
+          <div><span class="fl">Bahasa dalam game</span><div class="chips" id="c-gameLang"></div></div>
+        </div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-own">
+        <div class="sec-h"><h2 id="h-own">Idea anda</h2><span class="hint">pilihan</span></div>
+        <div class="inputs">
+          <div>
+            <label class="fl" for="in-title">Tajuk game <small>(kosongkan jika mahu AI cipta)</small></label>
+            <input class="inp" id="in-title" type="text" maxlength="80" autocomplete="off" placeholder="Contoh: Ular Wau Kampung">
+          </div>
+          <div>
+            <label class="fl" for="in-idea">Idea khas</label>
+            <textarea class="inp" id="in-idea" maxlength="600" placeholder="Contoh: ular yang makan ketupat, dan setiap 5 mata latar bertukar menjadi malam."></textarea>
+          </div>
+          <div>
+            <label class="fl" for="in-extra">Keperluan tambahan</label>
+            <textarea class="inp" id="in-extra" maxlength="600" placeholder="Contoh: kod tidak lebih 500 baris, dan tiada animasi berat."></textarea>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="out" aria-labelledby="out-title">
+      <div class="out-head">
+        <h2 id="out-title">Prompt anda</h2>
+        <div class="ctl">
+          <div class="seg" role="group" aria-label="Panjang prompt" id="c-len"></div>
+          <div class="seg" role="group" aria-label="Bahasa prompt" id="c-outLang"></div>
+        </div>
+      </div>
+      <p class="note">Kedua-dua bahasa berfungsi. English sering memberi hasil yang lebih konsisten.</p>
+
+      <div class="screen">
+        <div class="sbar">
+          <span class="name"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>prompt.txt</span>
+          <span id="stats"></span>
+        </div>
+        <div class="sbody" id="sbody" tabindex="0" role="region" aria-label="Pratonton prompt"></div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn primary" data-copy>Salin prompt</button>
+        <button type="button" class="btn" id="b-random">Kejutkan saya</button>
+        <button type="button" class="btn" id="b-reset">Set semula</button>
+      </div>
+      <p class="how">Tampal prompt ke ChatGPT, Claude, Gemini atau mana-mana AI lain. Simpan kod yang diberi sebagai index.html dan buka dalam pelayar.</p>
+      <span class="sr" role="status" id="status"></span>
+    </aside>
+  </main>
+</div>
+
+<div class="dock">
+  <span class="dock-stats" id="dock-stats"></span>
+  <button type="button" class="btn primary" data-copy>Salin prompt</button>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===== Data ===== */
+const GENRES=[
+ {id:'snake',l:'Ular',n:'Snake',
+  e:'a classic Snake game where the player steers a growing snake to eat food without hitting the walls or its own body',
+  m:'permainan Ular klasik di mana pemain mengawal ular yang semakin panjang untuk makan makanan tanpa melanggar dinding atau badan sendiri',
+  re:['The snake moves continuously on a grid; the player changes its direction but cannot reverse into itself.','Eating food adds one segment and increases the score.','The game ends when the snake hits a wall or its own body; food always spawns on a free cell.'],
+  rm:['Ular bergerak berterusan di atas grid; pemain menukar arah tetapi tidak boleh berpatah balik ke badan sendiri.','Memakan makanan menambah satu segmen dan meningkatkan skor.','Game tamat apabila ular melanggar dinding atau badan sendiri; makanan sentiasa muncul di petak kosong.']},
+ {id:'breakout',l:'Pemecah Bata',n:'Breakout',
+  e:'a Breakout-style game where a paddle bounces a ball to destroy rows of bricks',
+  m:'permainan gaya Breakout di mana pemukul memantulkan bola untuk memusnahkan barisan bata',
+  re:['A paddle at the bottom bounces a ball upward into rows of bricks; the bounce angle depends on where the ball hits the paddle.','Bricks have 1 to 3 hit points shown by colour; destroyed bricks may drop power-ups.','The player has 3 lives; a life is lost when the ball falls below the paddle, and clearing all bricks advances to the next layout.'],
+  rm:['Pemukul di bahagian bawah memantulkan bola ke atas ke barisan bata; sudut pantulan bergantung pada tempat bola mengenai pemukul.','Bata mempunyai 1 hingga 3 mata daya tahan yang ditunjukkan melalui warna; bata yang musnah boleh menjatuhkan power-up.','Pemain mempunyai 3 nyawa; satu nyawa hilang apabila bola jatuh di bawah pemukul, dan menghabiskan semua bata membawa ke susun atur seterusnya.']},
+ {id:'shooter',l:'Penembak Angkasa',n:'Space shooter',
+  e:'a top-down space shooter with waves of enemies',
+  m:'penembak angkasa pandangan atas dengan gelombang musuh',
+  re:['The player ship moves around the lower part of the screen and fires projectiles (auto-fire or hold to fire).','Enemies arrive in waves with different movement patterns, with a boss every fifth wave.','Collisions with enemies or enemy bullets cost a life; the player starts with 3 lives and is briefly invincible after being hit.'],
+  rm:['Kapal pemain bergerak di bahagian bawah skrin dan melepaskan peluru (tembakan automatik atau tahan untuk menembak).','Musuh datang dalam gelombang dengan corak pergerakan berbeza, dan bos muncul pada setiap gelombang kelima.','Berlanggar dengan musuh atau peluru musuh menyebabkan kehilangan satu nyawa; pemain bermula dengan 3 nyawa dan kebal seketika selepas terkena.']},
+ {id:'platformer',l:'Platform',n:'Platformer',
+  e:'a side-scrolling platformer with running, jumping and collectibles',
+  m:'game platform skrol sisi dengan larian, lompatan dan barang kutipan',
+  re:['A side-scrolling level built from tiles, with gravity, running and variable-height jumping (include coyote time and jump buffering).','The player collects coins, avoids hazards and stomps on simple patrolling enemies.','Each level ends at a goal flag; falling into a pit or touching a hazard costs a life, with checkpoints along the way.'],
+  rm:['Tahap skrol sisi yang dibina daripada jubin, dengan graviti, larian dan lompatan berketinggian boleh ubah (sertakan coyote time dan jump buffering).','Pemain mengumpul syiling, mengelak bahaya dan memijak musuh ronda yang mudah.','Setiap tahap berakhir di bendera sasaran; jatuh ke dalam lubang atau menyentuh bahaya menyebabkan kehilangan satu nyawa, dengan checkpoint sepanjang laluan.']},
+ {id:'runner',l:'Pelari Tanpa Henti',n:'Endless runner',
+  e:'an endless runner where the character runs automatically and avoids obstacles',
+  m:'game pelari tanpa henti di mana watak berlari secara automatik dan mengelak halangan',
+  re:['The character runs automatically; the player jumps and ducks to avoid obstacles.','Obstacles and coins spawn with random but fair spacing, and the speed increases with distance.','The score is based on distance and coins; one hit ends the run, followed by an instant retry option.'],
+  rm:['Watak berlari secara automatik; pemain melompat dan menunduk untuk mengelak halangan.','Halangan dan syiling muncul dengan jarak rawak tetapi adil, dan kelajuan meningkat mengikut jarak.','Skor berdasarkan jarak dan syiling; satu perlanggaran menamatkan larian, diikuti pilihan cuba semula serta-merta.']},
+ {id:'match3',l:'Padanan 3',n:'Match-3 puzzle',
+  e:'a match-3 puzzle where the player swaps tiles to form lines',
+  m:'puzzle padanan 3 di mana pemain menukar jubin untuk membentuk barisan',
+  re:['A grid of coloured tiles; the player swaps two adjacent tiles to form lines of 3 or more.','Matches clear tiles, new tiles fall in, and chain reactions give combo multipliers.','Each level has a limited number of moves or a timer and a target score; swaps that make no match are reverted, and a hint appears when the player is idle.'],
+  rm:['Grid jubin berwarna; pemain menukar dua jubin bersebelahan untuk membentuk barisan 3 atau lebih.','Padanan membersihkan jubin, jubin baharu jatuh masuk, dan tindak balas berantai memberi pengganda kombo.','Setiap tahap mempunyai bilangan pergerakan terhad atau pemasa dan skor sasaran; pertukaran tanpa padanan dibatalkan, dan petunjuk muncul apabila pemain tidak aktif.']},
+ {id:'merge',l:'Gabung Nombor',n:'2048-style',
+  e:'a 2048-style sliding number merge puzzle',
+  m:'puzzle gabung nombor gaya 2048',
+  re:['A 4x4 grid where all tiles slide in the chosen direction and equal numbers merge into their sum.','After every valid move, a new tile (2 or 4) appears in a random empty cell.','Reaching 2048 shows a win message with the option to continue; the game ends when no moves remain. Support undo for one move.'],
+  rm:['Grid 4x4 di mana semua jubin meluncur ke arah yang dipilih dan nombor yang sama bercantum menjadi hasil tambahnya.','Selepas setiap pergerakan sah, jubin baharu (2 atau 4) muncul di petak kosong secara rawak.','Mencapai 2048 memaparkan mesej kemenangan dengan pilihan untuk meneruskan; game tamat apabila tiada pergerakan lagi. Sokong buat asal untuk satu pergerakan.']},
+ {id:'memory',l:'Kad Memori',n:'Memory match',
+  e:'a memory card matching game',
+  m:'game padanan kad memori',
+  re:['Cards are placed face down in a grid; the player flips two cards per turn.','Matching pairs stay revealed; mismatched cards flip back after a short delay.','Track moves and time, award a 1 to 3 star rating, and increase the grid size on later levels.'],
+  rm:['Kad diletakkan menghadap ke bawah dalam grid; pemain membalikkan dua kad setiap giliran.','Pasangan yang sepadan kekal terbuka; kad yang tidak sepadan dibalikkan semula selepas seketika.','Jejak bilangan langkah dan masa, beri penarafan 1 hingga 3 bintang, dan besarkan grid pada tahap seterusnya.']},
+ {id:'word',l:'Teka Perkataan',n:'Word guess',
+  e:'a word guessing game',
+  m:'game meneka perkataan',
+  re:['The player guesses a hidden word within 6 attempts using a physical or on-screen keyboard.','After each guess, letters are coloured to show correct, misplaced or absent letters.','Embed a built-in word list of at least 100 words, validate guesses against it, and show win and lose messages with the answer.'],
+  rm:['Pemain meneka satu perkataan tersembunyi dalam 6 percubaan menggunakan papan kekunci fizikal atau pada skrin.','Selepas setiap tekaan, huruf diwarnakan untuk menunjukkan huruf yang betul, tersalah tempat atau tiada.','Benamkan senarai perkataan sekurang-kurangnya 100 perkataan, sahkan tekaan berdasarkan senarai itu, dan paparkan mesej menang dan kalah bersama jawapan.']},
+ {id:'quiz',l:'Kuiz',n:'Quiz',
+  e:'a timed multiple-choice quiz game',
+  m:'game kuiz aneka pilihan bermasa',
+  re:['Multiple-choice questions are shown one at a time with a countdown timer per question.','Correct answers earn points plus a speed and streak bonus; wrong answers or timeouts end the streak.','Embed a question bank of at least 30 questions in 3 categories, shuffle the order and answers, and offer one 50/50 lifeline per round.'],
+  rm:['Soalan aneka pilihan dipaparkan satu demi satu dengan pemasa undur bagi setiap soalan.','Jawapan betul memberi mata serta bonus kelajuan dan rentetan; jawapan salah atau kehabisan masa menamatkan rentetan.','Benamkan bank soalan sekurang-kurangnya 30 soalan dalam 3 kategori, kocok susunan soalan dan jawapan, dan sediakan satu bantuan 50/50 setiap pusingan.']},
+ {id:'tower',l:'Pertahanan Menara',n:'Tower defense',
+  e:'a tower defense game where the player places towers to stop waves of enemies',
+  m:'game pertahanan menara di mana pemain meletakkan menara untuk menghalang gelombang musuh',
+  re:['Enemies follow a fixed path in timed waves; the player spends currency to place towers on free tiles.','Offer at least 3 tower types (for example fast, area damage and slowing) with upgrade levels and a sell option.','Enemies reaching the exit reduce the base health; killing enemies earns currency; the game is won after the final wave.'],
+  rm:['Musuh mengikut laluan tetap dalam gelombang bermasa; pemain membelanjakan mata wang untuk meletakkan menara di jubin kosong.','Sediakan sekurang-kurangnya 3 jenis menara (contohnya pantas, kerosakan kawasan dan memperlahankan) dengan tahap peningkatan dan pilihan jual.','Musuh yang sampai ke pintu keluar mengurangkan kesihatan pangkalan; membunuh musuh memberi mata wang; game dimenangi selepas gelombang terakhir.']},
+ {id:'maze',l:'Labirin',n:'Maze',
+  e:'a maze game with randomly generated levels',
+  m:'game labirin dengan tahap yang dijana secara rawak',
+  re:['Generate a random maze each level with a depth-first search algorithm.','The player navigates from the start to the exit, optionally with limited visibility (fog of war) or a time limit.','Each level increases the maze size; show a move counter and the best time per level.'],
+  rm:['Jana labirin rawak pada setiap tahap menggunakan algoritma carian kedalaman dahulu (DFS).','Pemain bergerak dari titik mula ke pintu keluar, secara pilihan dengan penglihatan terhad (kabus) atau had masa.','Setiap tahap membesarkan labirin; paparkan kiraan langkah dan masa terbaik bagi setiap tahap.']},
+ {id:'racing',l:'Lumba Kereta',n:'Racing',
+  e:'a top-down car game where the player dodges traffic and collects coins',
+  m:'game kereta pandangan atas di mana pemain mengelak trafik dan mengutip syiling',
+  re:['A top-down road with several lanes scrolls toward the player; the player steers the car between lanes or freely.','Traffic cars and obstacles must be avoided; fuel and coins can be collected.','Speed rises over time, a collision ends the run, and the score is based on distance and coins.'],
+  rm:['Jalan pandangan atas dengan beberapa lorong bergerak ke arah pemain; pemain mengemudi kereta antara lorong atau secara bebas.','Kereta trafik dan halangan mesti dielak; bahan api dan syiling boleh dikutip.','Kelajuan meningkat mengikut masa, perlanggaran menamatkan larian, dan skor berdasarkan jarak dan syiling.']},
+ {id:'clicker',l:'Klik Santai',n:'Idle clicker',
+  e:'an idle clicker game with upgrades and automatic producers',
+  m:'game klik santai (idle) dengan peningkatan dan penghasil automatik',
+  re:['Clicking or tapping the main object earns currency; show floating numbers on each click.','Offer upgrades and automatic producers with costs that grow exponentially (about 15 percent per purchase).','Save progress automatically to localStorage, calculate offline earnings when the player returns, and add a prestige or reset mechanic.'],
+  rm:['Mengklik atau mengetik objek utama memberi mata wang; paparkan nombor terapung pada setiap klik.','Sediakan peningkatan dan penghasil automatik dengan kos yang meningkat secara eksponen (kira-kira 15 peratus setiap pembelian).','Simpan kemajuan secara automatik ke localStorage, kira pendapatan luar talian apabila pemain kembali, dan tambah mekanik prestij atau tetapan semula.']},
+ {id:'whack',l:'Pukul Tikus',n:'Whack-a-mole',
+  e:'a whack-a-mole reflex game',
+  m:'game refleks pukul tikus',
+  re:['A grid of holes where targets pop up at random positions for a short time.','Hitting a target scores points; hitting a decoy or missing costs points or time.','A 60-second round with targets that appear faster over time, a combo counter and a final grade.'],
+  rm:['Grid lubang di mana sasaran muncul di kedudukan rawak untuk masa yang singkat.','Mengenai sasaran memberi mata; mengenai umpan atau terlepas menolak mata atau masa.','Pusingan 60 saat dengan sasaran yang muncul semakin laju, pembilang kombo dan gred akhir.']},
+ {id:'flappy',l:'Terbang Rintangan',n:'Flappy-style',
+  e:'a one-button Flappy-style game where the player flies through gaps between obstacles',
+  m:'game satu butang gaya Flappy di mana pemain terbang melalui ruang antara halangan',
+  re:['One-button gameplay: each tap or key press makes the character flap upward while gravity pulls it down.','Pairs of obstacles with a gap scroll in from the right; the gap position is random but always reachable.','Each obstacle passed adds one point; touching an obstacle or the ground ends the game, and medals are awarded at score milestones.'],
+  rm:['Permainan satu butang: setiap ketikan atau tekanan kekunci menyebabkan watak mengepak ke atas manakala graviti menariknya ke bawah.','Pasangan halangan dengan ruang kosong bergerak masuk dari kanan; kedudukan ruang rawak tetapi sentiasa boleh dilalui.','Setiap halangan yang dilepasi menambah satu mata; menyentuh halangan atau tanah menamatkan game, dan pingat diberi pada pencapaian skor tertentu.']},
+ {id:'blocks',l:'Blok Jatuh',n:'Falling blocks',
+  e:'a falling blocks puzzle where the player clears horizontal lines',
+  m:'puzzle blok jatuh di mana pemain membersihkan baris mendatar',
+  re:['Pieces made of four squares fall into a 10x20 board; the player moves, rotates and drops them.','Completed horizontal lines are cleared and score points, with bonuses for clearing several lines at once.','Show the next piece and a hold slot, increase the falling speed every 10 lines, and end the game when the stack reaches the top.'],
+  rm:['Kepingan yang terdiri daripada empat petak jatuh ke papan 10x20; pemain menggerak, memutar dan menjatuhkannya.','Baris mendatar yang lengkap dibersihkan dan memberi mata, dengan bonus kerana membersihkan beberapa baris serentak.','Paparkan kepingan seterusnya dan slot simpan, tingkatkan kelajuan jatuh setiap 10 baris, dan tamatkan game apabila timbunan sampai ke atas.']}
+];
+
+const THEMES=[
+ {id:'pixel',l:'Piksel retro 8-bit',e:'retro 8-bit pixel art with a limited palette and crisp, sharp pixels (use image-rendering: pixelated)',m:'seni piksel retro 8-bit dengan palet terhad dan piksel yang tajam (gunakan image-rendering: pixelated)'},
+ {id:'neon',l:'Neon siber',e:'neon cyberpunk with glowing outlines, a dark background and bright magenta and cyan accents',m:'neon siberpunk dengan garisan bercahaya, latar gelap dan aksen magenta serta sian yang terang'},
+ {id:'minimal',l:'Minimalis rata',e:'clean, flat, minimalist shapes with a calm palette and generous spacing',m:'bentuk minimalis yang rata dan kemas dengan palet tenang dan ruang yang luas'},
+ {id:'cartoon',l:'Kartun ceria',e:'bright, playful cartoon style with rounded shapes and bold outlines',m:'gaya kartun ceria yang bersemangat dengan bentuk bulat dan garis tepi tebal'},
+ {id:'space',l:'Angkasa lepas',e:'a deep-space atmosphere with stars, nebula gradients and glowing objects',m:'suasana angkasa lepas dengan bintang, kecerunan nebula dan objek bercahaya'},
+ {id:'forest',l:'Hutan tropika',e:'a lush tropical rainforest with layered greens, parallax foliage and warm light',m:'hutan hujan tropika yang subur dengan lapisan hijau, dedaunan paralaks dan cahaya hangat'},
+ {id:'kampung',l:'Kampung Malaysia',e:'Malaysian village-inspired visuals: wooden houses, paddy fields, wau, ketupat and batik-inspired patterns',m:'visual berinspirasikan kampung Malaysia: rumah kayu, sawah padi, wau, ketupat dan corak berinspirasikan batik'},
+ {id:'ocean',l:'Dunia bawah laut',e:'an underwater world with blue gradients, bubbles and soft caustic light',m:'dunia bawah laut dengan kecerunan biru, gelembung dan cahaya kaustik yang lembut'},
+ {id:'pastel',l:'Pastel manis',e:'soft candy pastel colours, gentle shadows and cute rounded shapes',m:'warna pastel gula-gula yang lembut, bayang halus dan bentuk bulat yang comel'},
+ {id:'sketch',l:'Lakaran tangan',e:'a hand-drawn sketchbook look on a paper texture with wobbly outlines',m:'rupa buku lakaran yang dilukis tangan di atas tekstur kertas dengan garisan bergoyang'}
+];
+
+const CONTROLS=[
+ {id:'keyboard',l:'Papan kekunci',se:'keyboard',sm:'papan kekunci',e:'Keyboard: arrow keys or WASD to move, Space or Enter for the main action, P or Esc to pause.',m:'Papan kekunci: kekunci anak panah atau WASD untuk bergerak, Space atau Enter untuk tindakan utama, P atau Esc untuk jeda.'},
+ {id:'mouse',l:'Tetikus',se:'mouse',sm:'tetikus',e:'Mouse: click, drag or move the pointer for the main interactions.',m:'Tetikus: klik, seret atau gerakkan penuding untuk interaksi utama.'},
+ {id:'touch',l:'Sentuhan (telefon)',se:'touch',sm:'sentuhan',e:'Touch: tap, swipe and on-screen buttons with large touch targets (use pointer events and touch-action: none on the game area).',m:'Sentuhan: ketik, leret dan butang pada skrin dengan sasaran sentuh yang besar (gunakan pointer events dan touch-action: none pada kawasan game).'},
+ {id:'gamepad',l:'Gamepad',se:'gamepad',sm:'gamepad',e:'Gamepad: support the Gamepad API (D-pad or left stick to move, A button for the main action, Start to pause).',m:'Gamepad: sokong Gamepad API (D-pad atau bius kiri untuk bergerak, butang A untuk tindakan utama, Start untuk jeda).'}
+];
+
+const FEATURES=[
+ {id:'score',l:'Skor dan skor tertinggi',ne:'score and high score',e:'Show the current score in a HUD and keep the high score in localStorage.',m:'Paparkan skor semasa pada HUD dan simpan skor tertinggi dalam localStorage.'},
+ {id:'levels',l:'Tahap dan kemajuan',ne:'levels and progression',e:'Raise the difficulty in clear steps, with a short level-up banner.',m:'Tingkatkan kesukaran dalam langkah yang jelas, dengan sepanduk naik tahap yang ringkas.'},
+ {id:'powerups',l:'Power-up',ne:'power-ups',e:'Add 3 distinct power-ups with timed effects and visible indicators.',m:'Tambah 3 power-up berbeza dengan kesan bermasa dan penunjuk yang kelihatan.'},
+ {id:'sfx',l:'Kesan bunyi',ne:'sound effects',e:'Generate sound effects with the Web Audio API (no audio files), start audio only after the first user interaction, and provide a mute toggle.',m:'Jana kesan bunyi dengan Web Audio API (tanpa fail audio), mulakan audio hanya selepas interaksi pertama pengguna, dan sediakan butang senyap.'},
+ {id:'music',l:'Muzik latar',ne:'background music',e:'Add a simple procedural looping music track with the Web Audio API and a volume slider.',m:'Tambah trek muzik berulang yang ringkas dan dijana melalui Web Audio API serta peluncur kelantangan.'},
+ {id:'pause',l:'Menu jeda dan mula semula',ne:'a pause and restart menu',e:'Include pause (P or Esc), resume, restart and quit-to-title, and pause automatically when the tab loses focus.',m:'Sertakan jeda (P atau Esc), sambung, mula semula dan kembali ke tajuk, serta jeda secara automatik apabila tab hilang fokus.'},
+ {id:'particles',l:'Zarah dan goncangan skrin',ne:'particles and screen shake',e:'Add particle bursts and subtle screen shake on key events, and respect prefers-reduced-motion.',m:'Tambah letusan zarah dan goncangan skrin yang halus pada peristiwa penting, dan hormati prefers-reduced-motion.'},
+ {id:'achievements',l:'Pencapaian',ne:'achievements',e:'Add 5 to 8 achievements with toast notifications, saved in localStorage.',m:'Tambah 5 hingga 8 pencapaian dengan notifikasi toast, disimpan dalam localStorage.'},
+ {id:'tutorial',l:'Skrin cara bermain',ne:'a how-to-play screen',e:'Include a concise how-to-play screen shown on first launch.',m:'Sertakan skrin cara bermain yang ringkas dan dipaparkan pada pelancaran pertama.'},
+ {id:'leaderboard',l:'Papan pendahulu setempat',ne:'a local leaderboard',e:'Keep a top-10 local leaderboard with player initials, stored in localStorage.',m:'Simpan papan pendahulu setempat 10 teratas dengan inisial pemain dalam localStorage.'},
+ {id:'fullscreen',l:'Skrin penuh',ne:'a fullscreen toggle',e:'Provide a fullscreen toggle button and handle a refused request gracefully.',m:'Sediakan butang togol skrin penuh dan tangani permintaan yang ditolak dengan baik.'},
+ {id:'settings',l:'Panel tetapan',ne:'a settings panel',e:'Add a settings panel for volume, difficulty and a colour-blind-friendly mode.',m:'Tambah panel tetapan untuk kelantangan, kesukaran dan mod mesra buta warna.'}
+];
+
+const DIFFS=[
+ {id:'easy',l:'Mudah',se:'easy',sm:'mudah',e:'Easy: forgiving, with a slow start and generous lives.',m:'Mudah: bertolak ansur, dengan permulaan perlahan dan nyawa yang banyak.'},
+ {id:'medium',l:'Sederhana',se:'balanced in difficulty',sm:'seimbang dari segi kesukaran',e:'Medium: a balanced challenge that suits most players.',m:'Sederhana: cabaran seimbang yang sesuai untuk kebanyakan pemain.'},
+ {id:'hard',l:'Sukar',se:'hard',sm:'sukar',e:'Hard: fast and punishing, with few lives.',m:'Sukar: pantas dan tegas, dengan nyawa yang sedikit.'},
+ {id:'progressive',l:'Menaik beransur',se:'progressively harder',sm:'semakin sukar secara beransur',e:'Progressive: starts easy and ramps up gradually with the level or elapsed time.',m:'Menaik: bermula mudah dan meningkat secara beransur mengikut tahap atau masa berlalu.'}
+];
+
+const AUDS=[
+ {id:'kids',l:'Kanak-kanak',se:'children aged 6 to 12',sm:'kanak-kanak berumur 6 hingga 12 tahun',e:'children aged 6 to 12: bright, simple and forgiving, with no violent or scary content.',m:'kanak-kanak berumur 6 hingga 12 tahun: ceria, ringkas dan bertolak ansur, tanpa kandungan ganas atau menakutkan.'},
+ {id:'general',l:'Umum',se:'a general audience',sm:'orang ramai semua peringkat umur',e:'a general audience of all ages.',m:'orang ramai semua peringkat umur.'},
+ {id:'teens',l:'Remaja dan dewasa',se:'teenagers and adults',sm:'remaja dan dewasa',e:'teenagers and adults who enjoy a faster, more challenging experience.',m:'remaja dan dewasa yang gemar pengalaman yang lebih pantas dan mencabar.'}
+];
+
+const PLATS=[
+ {id:'desktop',l:'Desktop',se:'desktop browsers',sm:'pelayar desktop',e:'Desktop browsers, keyboard and mouse first. Scale the game to the window size.',m:'Pelayar desktop, utamakan papan kekunci dan tetikus. Skalakan game mengikut saiz tetingkap.'},
+ {id:'mobile',l:'Telefon',se:'mobile browsers in portrait',sm:'pelayar mudah alih dalam orientasi menegak',e:'Mobile browsers in portrait orientation, touch first. Make buttons at least 44px, and prevent page scroll and zoom while playing.',m:'Pelayar mudah alih dalam orientasi menegak, utamakan sentuhan. Jadikan butang sekurang-kurangnya 44px, dan halang skrol serta zum halaman semasa bermain.'},
+ {id:'both',l:'Desktop dan telefon',se:'both desktop and mobile browsers',sm:'pelayar desktop dan mudah alih',e:'Both desktop and mobile, with a responsive layout that scales the game to the available space while keeping its aspect ratio.',m:'Desktop dan mudah alih, dengan reka letak responsif yang menyesuaikan game kepada ruang sedia ada sambil mengekalkan nisbah aspeknya.'}
+];
+
+const TECHS=[
+ {id:'single-canvas',l:'Satu fail · Canvas',files:'single',e:'a single self-contained index.html file with inline CSS and JavaScript, rendering with HTML5 Canvas and vanilla JavaScript (no libraries)',m:'satu fail index.html yang lengkap dengan CSS dan JavaScript sebaris, dirender menggunakan HTML5 Canvas dan JavaScript asli (tanpa pustaka)'},
+ {id:'single-dom',l:'Satu fail · DOM dan CSS',files:'single',e:'a single self-contained index.html file with inline CSS and JavaScript, using DOM elements, CSS grid or flexbox, CSS animations and vanilla JavaScript (no libraries)',m:'satu fail index.html yang lengkap dengan CSS dan JavaScript sebaris, menggunakan elemen DOM, CSS grid atau flexbox, animasi CSS dan JavaScript asli (tanpa pustaka)'},
+ {id:'multi',l:'Tiga fail berasingan',files:'multi',e:'three files (index.html, style.css and game.js) using HTML5 Canvas and vanilla JavaScript (no libraries)',m:'tiga fail (index.html, style.css dan game.js) menggunakan HTML5 Canvas dan JavaScript asli (tanpa pustaka)'},
+ {id:'phaser',l:'Phaser 3 (CDN)',files:'single',lib:true,e:'a single index.html file that loads Phaser 3 from a CDN with an exact pinned version, and generates all graphics in code (no external image files)',m:'satu fail index.html yang memuatkan Phaser 3 daripada CDN dengan versi tepat yang dikunci, dan menjana semua grafik melalui kod (tanpa fail imej luaran)'}
+];
+
+const LANGS=[
+ {id:'ms',l:'Bahasa Melayu',se:'Bahasa Melayu (Malay)',sm:'Bahasa Melayu'},
+ {id:'en',l:'English',se:'English',sm:'English'},
+ {id:'bi',l:'Dwibahasa',se:'both Malay and English, with a language toggle button on the title screen',sm:'Bahasa Melayu dan English, dengan butang tukar bahasa pada skrin tajuk'}
+];
+
+const LENS=[{id:'short',l:'Ringkas'},{id:'medium',l:'Medium'},{id:'long',l:'Panjang'}];
+const OUTL=[{id:'en',l:'English'},{id:'ms',l:'Bahasa Melayu'}];
+
+const DATA={genre:GENRES,theme:THEMES,controls:CONTROLS,features:FEATURES,difficulty:DIFFS,audience:AUDS,platform:PLATS,tech:TECHS,gameLang:LANGS,len:LENS,outLang:OUTL};
+const MULTI={controls:1,features:1};
+const SEGS={len:1,outLang:1};
+
+const DEFAULTS={genre:'snake',theme:'pixel',controls:['keyboard','touch'],features:['score','pause','sfx','tutorial'],difficulty:'progressive',audience:'general',platform:'both',tech:'single-canvas',gameLang:'ms',len:'medium',outLang:'en',title:'',idea:'',extra:''};
+const KEY='penjana-prompt-game-v1';
+let S=JSON.parse(JSON.stringify(DEFAULTS));
+let currentText='';
+
+const $=(s)=>document.querySelector(s);
+const f=(k,id)=>DATA[k].find(o=>o.id===id)||DATA[k][0];
+
+/* ===== Simpan dan muat pilihan ===== */
+function sanitize(){
+  Object.keys(DATA).forEach(k=>{
+    const ids=DATA[k].map(o=>o.id);
+    if(MULTI[k]){ S[k]=Array.isArray(S[k])?S[k].filter(i=>ids.includes(i)):DEFAULTS[k].slice(); }
+    else if(!ids.includes(S[k])){ S[k]=DEFAULTS[k]; }
+  });
+  ['title','idea','extra'].forEach(k=>{ if(typeof S[k]!=='string') S[k]=''; });
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw){ const o=JSON.parse(raw); Object.keys(DEFAULTS).forEach(k=>{ if(k in o) S[k]=o[k]; }); }
+  }catch(e){}
+  sanitize();
+}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+
+/* ===== Pembina prompt ===== */
+function build(){
+  const L=S.outLang, x=(en,ms)=>L==='en'?en:ms;
+  const E=o=>L==='en'?o.e:o.m, SH=o=>L==='en'?o.se:o.sm;
+  const g=f('genre',S.genre), th=f('theme',S.theme), df=f('difficulty',S.difficulty), au=f('audience',S.audience),
+        pl=f('platform',S.platform), te=f('tech',S.tech), gl=f('gameLang',S.gameLang);
+  const cs=CONTROLS.filter(c=>S.controls.includes(c.id));
+  const fs=FEATURES.filter(c=>S.features.includes(c.id));
+  const clean=s=>s.trim().replace(/[.\s]+$/,'');
+  const title=clean(S.title), idea=clean(S.idea), extra=clean(S.extra);
+  const list=a=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+x(' and ',' dan ')+a[a.length-1];
+  const gname=L==='en'?g.n:g.l+' ('+g.n+')';
+  const fname=c=>L==='en'?c.ne:c.l.toLowerCase();
+  const rules=L==='en'?g.re:g.rm;
+  const multi=te.files==='multi';
+  const out=[]; const P=(s)=>out.push(s===undefined?'':s); const B=(s)=>out.push('- '+s);
+  const H=(s)=>{ if(out.length) P(); P('## '+s); };
+
+  if(S.len==='short'){
+    const parts=[];
+    parts.push(x('Create a complete, playable browser game'+(title?' called "'+title+'"':'')+': '+g.e+'.',
+                 'Bina satu game pelayar yang lengkap dan boleh dimainkan'+(title?' bertajuk "'+title+'"':'')+': '+g.m+'.'));
+    parts.push(x('Build it as '+te.e+'.','Bina menggunakan '+te.m+'.'));
+    parts.push(x('Visual style: '+th.e+'.','Gaya visual: '+th.m+'.'));
+    parts.push(x('Controls: '+(list(cs.map(SH))||'sensible defaults')+'.','Kawalan: '+(list(cs.map(SH))||'lalai yang sesuai')+'.'));
+    if(fs.length) parts.push(x('Include '+list(fs.map(fname))+'.','Sertakan '+list(fs.map(fname))+'.'));
+    parts.push(x('Make it '+SH(df)+', aimed at '+SH(au)+', for '+SH(pl)+'.','Jadikan ia '+SH(df)+', ditujukan kepada '+SH(au)+', untuk '+SH(pl)+'.'));
+    parts.push(x('All in-game text should be in '+SH(gl)+'.','Semua teks dalam game hendaklah dalam '+SH(gl)+'.'));
+    if(idea) parts.push(x('Extra idea: '+idea+'.','Idea tambahan: '+idea+'.'));
+    if(extra) parts.push(x('Also: '+extra+'.','Tambahan: '+extra+'.'));
+    parts.push(x('Draw everything with code (no external images or audio files) and return the full working code in '+(multi?'three labelled code blocks':'one code block')+'.',
+                 'Lukis semuanya dengan kod (tanpa fail imej atau audio luaran) dan berikan kod penuh yang berfungsi dalam '+(multi?'tiga blok kod berlabel':'satu blok kod')+'.'));
+    return parts.join(' ');
+  }
+
+  if(S.len==='medium'){
+    P(x('Act as an experienced HTML5 game developer. Build a complete, playable browser game based on the brief below.',
+        'Bertindak sebagai pembangun game HTML5 yang berpengalaman. Bina satu game pelayar yang lengkap dan boleh dimainkan berdasarkan ringkasan di bawah.'));
+    H(x('GAME','GAME'));
+    B(x('Title: '+(title||'invent a short, memorable title'),'Tajuk: '+(title||'cipta tajuk yang pendek dan mudah diingat')));
+    B(x('Type: '+gname+', '+g.e,'Jenis: '+gname+', '+g.m));
+    if(idea) B(x('Idea to include: '+idea,'Idea untuk dimasukkan: '+idea));
+    H(x('GAMEPLAY','PERMAINAN'));
+    rules.forEach(r=>B(r));
+    B(E(df)); B(x('Audience: ','Pemain sasaran: ')+E(au));
+    H(x('CONTROLS','KAWALAN'));
+    if(cs.length) cs.forEach(c=>B(E(c))); else B(x('Choose sensible controls for this game.','Pilih kawalan yang sesuai untuk game ini.'));
+    H(x('LOOK AND FEEL','RUPA DAN SUASANA'));
+    B(x('Visual style: '+th.e+'.','Gaya visual: '+th.m+'.'));
+    B(x('Draw all graphics with code (Canvas shapes, CSS or emoji). Do not use external images.','Lukis semua grafik dengan kod (bentuk Canvas, CSS atau emoji). Jangan gunakan imej luaran.'));
+    H(x('FEATURES','CIRI-CIRI'));
+    if(fs.length) fs.forEach(c=>B(fname(c)[0].toUpperCase()+fname(c).slice(1))); else B(x('No extra features beyond the core gameplay.','Tiada ciri tambahan selain permainan teras.'));
+    H(x('TECHNICAL','TEKNIKAL'));
+    B(x('Build it as '+te.e+'.','Bina sebagai '+te.m+'.'));
+    B(x('Platform: ','Platform: ')+E(pl));
+    B(x('Write all in-game text in '+SH(gl)+'.','Tulis semua teks dalam game dalam '+SH(gl)+'.'));
+    B(x('Use requestAnimationFrame with delta time, and keep the code clean and commented.','Gunakan requestAnimationFrame dengan masa delta, dan pastikan kod kemas serta berkomen.'));
+    if(extra){ H(x('ADDITIONAL REQUIREMENTS','KEPERLUAN TAMBAHAN')); B(extra); }
+    H(x('OUTPUT','OUTPUT'));
+    B(x('Return the full working code in '+(multi?'three labelled code blocks':'one code block')+', ready to run by opening it in a browser.','Berikan kod penuh yang berfungsi dalam '+(multi?'tiga blok kod berlabel':'satu blok kod')+', sedia dijalankan dengan membukanya dalam pelayar.'));
+    B(x('Do not ask questions. Make reasonable assumptions instead.','Jangan bertanya soalan. Buat andaian yang munasabah sebaliknya.'));
+    return out.join('\n');
+  }
+
+  /* panjang */
+  P(x('You are a senior HTML5 game developer and game designer with deep experience in vanilla JavaScript, Canvas rendering, game feel and accessible UI. Design and build a complete, polished, playable browser game from the brief below.',
+      'Anda ialah pembangun dan pereka game HTML5 kanan yang mahir dalam JavaScript asli, rendering Canvas, game feel dan UI yang boleh diakses. Reka dan bina satu game pelayar yang lengkap, kemas dan boleh dimainkan berdasarkan ringkasan di bawah.'));
+
+  H(x('OVERVIEW','GAMBARAN KESELURUHAN'));
+  B(x('Title: '+(title||'invent a short, memorable title'),'Tajuk: '+(title||'cipta tajuk yang pendek dan mudah diingat')));
+  B(x('Genre: '+gname,'Genre: '+gname));
+  B(x('Concept: '+g.e,'Konsep: '+g.m));
+  B(x('Audience: ','Pemain sasaran: ')+E(au));
+  if(idea) B(x('Idea to include: '+idea,'Idea untuk dimasukkan: '+idea));
+  B(x('Session length: a typical session lasts 2 to 5 minutes, with an instant restart.','Tempoh sesi: satu sesi biasa mengambil masa 2 hingga 5 minit, dengan mula semula serta-merta.'));
+
+  H(x('CORE GAMEPLAY','PERMAINAN TERAS'));
+  rules.forEach(r=>B(r));
+  B(x('Define a clear scoring system and show it on screen so the player always understands why points change.','Tetapkan sistem skor yang jelas dan paparkannya pada skrin supaya pemain sentiasa faham mengapa mata berubah.'));
+  B(x('Define clear win and lose conditions, and show a result screen when the game ends.','Tetapkan syarat menang dan kalah yang jelas, dan paparkan skrin keputusan apabila game tamat.'));
+  B(x('Avoid unfair situations such as impossible layouts or instant deaths at the start.','Elakkan situasi tidak adil seperti susun atur mustahil atau kematian serta-merta pada permulaan.'));
+
+  H(x('DIFFICULTY AND PROGRESSION','KESUKARAN DAN KEMAJUAN'));
+  B(E(df));
+  B(x('Scale difficulty with at most 3 parameters (for example speed, spawn rate and enemy count) and cap each one so the game stays fair.','Skalakan kesukaran dengan paling banyak 3 parameter (contohnya kelajuan, kadar kemunculan dan bilangan musuh) dan hadkan setiap satu supaya game kekal adil.'));
+  B(x('Show a short banner whenever the difficulty increases.','Paparkan sepanduk ringkas setiap kali kesukaran meningkat.'));
+
+  H(x('CONTROLS','KAWALAN'));
+  if(cs.length) cs.forEach(c=>B(E(c))); else B(x('Choose sensible controls for this game.','Pilih kawalan yang sesuai untuk game ini.'));
+  B(x('Show control hints on the title screen and on the how-to-play screen.','Paparkan petunjuk kawalan pada skrin tajuk dan skrin cara bermain.'));
+  B(x('Handle simultaneous inputs and focus loss gracefully (reset pressed keys on blur).','Tangani input serentak dan kehilangan fokus dengan baik (tetapkan semula kekunci yang ditekan apabila blur).'));
+
+  H(x('VISUAL DESIGN','REKA BENTUK VISUAL'));
+  B(x('Style: '+th.e+'.','Gaya: '+th.m+'.'));
+  B(x('Palette: define 5 to 7 colours as constants or CSS variables and reuse them everywhere.','Palet: tetapkan 5 hingga 7 warna sebagai pemalar atau pemboleh ubah CSS dan gunakannya semula di mana-mana.'));
+  B(x('Graphics: draw every sprite with code (Canvas primitives, CSS or emoji). Do not use external image files.','Grafik: lukis setiap sprite dengan kod (primitif Canvas, CSS atau emoji). Jangan gunakan fail imej luaran.'));
+  B(x('Screens: a title screen (name, play button, high score, control hints), an in-game HUD (score, lives or timer, level), a pause overlay, and a game over screen with the final score, best score and a Play Again button.','Skrin: skrin tajuk (nama, butang main, skor tertinggi, petunjuk kawalan), HUD dalam game (skor, nyawa atau pemasa, tahap), tindihan jeda, dan skrin tamat dengan skor akhir, skor terbaik dan butang Main Lagi.'));
+  B(x('Animation: subtle transitions and feedback (hit flashes, score pops, easing) at a steady 60 FPS, respecting prefers-reduced-motion.','Animasi: peralihan dan maklum balas yang halus (kilatan terkena, skor muncul, easing) pada 60 FPS yang stabil, menghormati prefers-reduced-motion.'));
+  B(x('Layout: ','Reka letak: ')+E(pl));
+
+  if(S.features.includes('sfx')||S.features.includes('music')){
+    H(x('AUDIO','AUDIO'));
+    B(x('Generate all audio with the Web Audio API (no audio files). Create the AudioContext only after the first user gesture, keep volumes moderate, and provide a visible mute button.','Jana semua audio dengan Web Audio API (tanpa fail audio). Cipta AudioContext hanya selepas gerak isyarat pertama pengguna, pastikan kelantangan sederhana, dan sediakan butang senyap yang kelihatan.'));
+  }
+
+  H(x('FEATURES','CIRI-CIRI'));
+  if(fs.length) fs.forEach(c=>B(E(c))); else B(x('No extra features beyond the core gameplay. Focus on polish.','Tiada ciri tambahan selain permainan teras. Fokus pada kekemasan.'));
+
+  H(x('TECHNICAL REQUIREMENTS','KEPERLUAN TEKNIKAL'));
+  B(x('Deliver it as '+te.e+'.','Hasilkan sebagai '+te.m+'.'));
+  B(x('Platform: ','Platform: ')+E(pl));
+  B(x('Write all in-game text in '+SH(gl)+'.','Tulis semua teks dalam game dalam '+SH(gl)+'.'));
+  B(x('Architecture: organise the code into clear sections: config and constants, state, input, update, render, screens and UI, audio, storage, and init.','Seni bina: susun kod kepada bahagian yang jelas: konfigurasi dan pemalar, keadaan, input, kemas kini, render, skrin dan UI, audio, storan, dan init.'));
+  B(x('Game loop: use requestAnimationFrame with delta time (capped at 50 ms) so the game runs at the same speed on 60 Hz and 144 Hz screens.','Gelung game: gunakan requestAnimationFrame dengan masa delta (dihadkan pada 50 ms) supaya game berjalan pada kelajuan sama pada skrin 60 Hz dan 144 Hz.'));
+  B(x('State machine: title, playing, paused and game over.','Mesin keadaan: tajuk, bermain, dijeda dan tamat.'));
+  B(x('Rendering: handle devicePixelRatio and window resize; keep a fixed logical resolution and scale it to fit.','Rendering: tangani devicePixelRatio dan saiz semula tetingkap; kekalkan resolusi logik tetap dan skalakan untuk muat.'));
+  B(x('Storage: wrap every localStorage access in try/catch, and keep the game working without it.','Storan: bungkus setiap akses localStorage dalam try/catch, dan pastikan game masih berfungsi tanpanya.'));
+  B(x('Performance: avoid allocating objects every frame where possible, and reuse pools for bullets and particles.','Prestasi: elakkan peruntukan objek pada setiap bingkai jika boleh, dan guna semula kolam untuk peluru dan zarah.'));
+  B(x('Accessibility: sufficient colour contrast, never rely on colour alone, keyboard-operable menus with a visible focus state, and aria-labels on buttons.','Kebolehcapaian: kontras warna yang mencukupi, jangan bergantung pada warna semata-mata, menu yang boleh dikendalikan dengan papan kekunci dengan keadaan fokus yang kelihatan, dan aria-label pada butang.'));
+  B(x('Do not use alert, confirm or prompt dialogs; build every message into the page.','Jangan gunakan dialog alert, confirm atau prompt; bina setiap mesej ke dalam halaman.'));
+  B(te.lib
+    ? x('The only external dependency allowed is Phaser 3, loaded from a CDN with an exact pinned version. Everything else must work offline.','Satu-satunya kebergantungan luaran yang dibenarkan ialah Phaser 3, dimuatkan daripada CDN dengan versi tepat yang dikunci. Semua yang lain mesti berfungsi tanpa talian.')
+    : x('Do not use external images, fonts, audio or libraries; the game must work offline.','Jangan gunakan imej, fon, audio atau pustaka luaran; game mesti berfungsi tanpa talian.'));
+
+  H(x('QUALITY CHECKLIST','SENARAI SEMAK KUALITI'));
+  B(x('The game starts without console errors and is playable immediately.','Game bermula tanpa ralat konsol dan boleh dimainkan serta-merta.'));
+  B(x('Restarting never duplicates event listeners or timers.','Mula semula tidak menggandakan pendengar acara atau pemasa.'));
+  B(x('Pausing stops all movement, timers and audio.','Jeda menghentikan semua pergerakan, pemasa dan audio.'));
+  B(x('Resizing the window never breaks the layout.','Menukar saiz tetingkap tidak merosakkan reka letak.'));
+  B(x('The code is readable, with concise comments on every major section.','Kod mudah dibaca, dengan komen ringkas pada setiap bahagian utama.'));
+
+  if(extra){ H(x('ADDITIONAL REQUIREMENTS','KEPERLUAN TAMBAHAN')); B(extra); }
+
+  H(x('OUTPUT FORMAT','FORMAT OUTPUT'));
+  P(x('1. Start with a short summary (maximum 5 bullets) of your main design decisions and assumptions.','1. Mulakan dengan ringkasan pendek (maksimum 5 titik) tentang keputusan reka bentuk dan andaian utama anda.'));
+  P(x('2. Then give the complete, final code in '+(multi?'three separate code blocks labelled index.html, style.css and game.js':'one single code block')+', ready to run by opening index.html in a browser.','2. Kemudian berikan kod lengkap dan muktamad dalam '+(multi?'tiga blok kod berasingan berlabel index.html, style.css dan game.js':'satu blok kod')+', sedia dijalankan dengan membuka index.html dalam pelayar.'));
+  P(x('3. Finish with brief how-to-play instructions and 5 ideas to extend the game later.','3. Akhiri dengan arahan cara bermain yang ringkas dan 5 idea untuk mengembangkan game kemudian.'));
+  B(x('Do not ask clarifying questions. Make reasonable assumptions and state them in the summary.','Jangan bertanya soalan penjelasan. Buat andaian yang munasabah dan nyatakannya dalam ringkasan.'));
+  B(x('Never use placeholders such as "rest of code here". Output the full code.','Jangan guna pemegang tempat seperti "baki kod di sini". Berikan kod penuh.'));
+  return out.join('\n');
+}
+
+/* ===== Paparan ===== */
+function mkChips(key){
+  const box=document.getElementById('c-'+key); if(!box) return;
+  box.textContent='';
+  DATA[key].forEach(o=>{
+    const b=document.createElement('button');
+    b.type='button'; b.dataset.key=key; b.dataset.id=o.id;
+    b.className=SEGS[key]?'sb':'chip';
+    if(key==='genre'){
+      const a=document.createElement('span'); a.textContent=o.l;
+      const c=document.createElement('span'); c.className='s'; c.textContent=o.n;
+      b.append(a,c);
+    } else b.textContent=o.l;
+    box.appendChild(b);
+  });
+}
+function paintChips(){
+  document.querySelectorAll('[data-key]').forEach(b=>{
+    const k=b.dataset.key, id=b.dataset.id;
+    const on=MULTI[k]?S[k].includes(id):S[k]===id;
+    b.classList.toggle('on',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+  });
+}
+function render(){
+  currentText=build();
+  const body=$('#sbody'); body.textContent='';
+  let last=null;
+  currentText.split('\n').forEach(line=>{
+    const d=document.createElement('div');
+    if(line===''){ d.className='gap'; }
+    else if(line.indexOf('## ')===0){ d.className='h'; d.textContent=line; }
+    else if(/^(- |\d+\. )/.test(line)){ d.className='li'; d.textContent=line; }
+    else d.textContent=line;
+    body.appendChild(d); if(line!=='') last=d;
+  });
+  if(last){ const cur=document.createElement('span'); cur.className='cur'; cur.setAttribute('aria-hidden','true'); last.appendChild(cur); }
+  const words=currentText.trim().split(/\s+/).length;
+  const tok=Math.ceil(currentText.length/4);
+  const st='~'+words+' perkataan · ~'+tok+' token';
+  $('#stats').textContent=st;
+  $('#dock-stats').textContent=st;
+}
+function refresh(){ paintChips(); render(); save(); }
+
+/* ===== Salin ===== */
+let copyTimer=null;
+function flash(text){
+  document.querySelectorAll('[data-copy]').forEach(b=>{ if(!b.dataset.orig) b.dataset.orig=b.textContent; b.textContent=text; });
+  $('#status').textContent=text;
+  clearTimeout(copyTimer);
+  copyTimer=setTimeout(()=>{ document.querySelectorAll('[data-copy]').forEach(b=>{ b.textContent=b.dataset.orig; }); },2000);
+}
+function fallbackSelect(){
+  const r=document.createRange(); r.selectNodeContents($('#sbody'));
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+  flash(ok?'Disalin':'Teks dipilih, tekan Ctrl+C');
+}
+function copy(){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(currentText).then(()=>flash('Disalin'),fallbackSelect);
+  } else fallbackSelect();
+}
+
+/* ===== Rawak dan set semula ===== */
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+function sample(a,min,max){ const n=min+Math.floor(Math.random()*(max-min+1)); return a.slice().sort(()=>Math.random()-.5).slice(0,n); }
+function randomize(){
+  S.genre=rnd(GENRES).id; S.theme=rnd(THEMES).id;
+  S.controls=sample(CONTROLS.map(c=>c.id),1,3);
+  S.features=sample(FEATURES.map(c=>c.id),3,6);
+  S.difficulty=rnd(DIFFS).id; S.audience=rnd(AUDS).id; S.platform=rnd(PLATS).id;
+  S.tech=rnd(['single-canvas','single-canvas','single-dom','multi','phaser']);
+  S.gameLang=rnd(LANGS).id;
+  refresh();
+}
+function reset(){
+  const len=S.len, out=S.outLang;
+  S=JSON.parse(JSON.stringify(DEFAULTS)); S.len=len; S.outLang=out;
+  syncInputs(); refresh();
+}
+function syncInputs(){ $('#in-title').value=S.title; $('#in-idea').value=S.idea; $('#in-extra').value=S.extra; }
+
+/* ===== Mula ===== */
+load();
+Object.keys(DATA).forEach(mkChips);
+syncInputs();
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-key]');
+  if(b){
+    const k=b.dataset.key, id=b.dataset.id;
+    if(MULTI[k]){ const i=S[k].indexOf(id); if(i>=0) S[k].splice(i,1); else S[k].push(id); }
+    else S[k]=id;
+    refresh(); return;
+  }
+  if(e.target.closest('[data-copy]')) copy();
+});
+$('#b-random').addEventListener('click',randomize);
+$('#b-reset').addEventListener('click',reset);
+[['#in-title','title'],['#in-idea','idea'],['#in-extra','extra']].forEach(p=>{
+  $(p[0]).addEventListener('input',e=>{ S[p[1]]=e.target.value; render(); save(); });
+});
+
+refresh();
+})();
+</script>
+
+</body></html>
